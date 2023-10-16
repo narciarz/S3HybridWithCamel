@@ -45,11 +45,11 @@ public class S3Service {
     }
 
     public DeleteObjectResponse deleteObject(String bucketName, String dir, String fileName) {
-        DeleteObjectRequest deletOb = DeleteObjectRequest.builder()
+        DeleteObjectRequest deleteOb = DeleteObjectRequest.builder()
                 .bucket(bucketName)
                 .key(getFileName(dir, fileName))
                 .build();
-        return s3Client.deleteObject(deletOb);
+        return s3Client.deleteObject(deleteOb);
     }
 
     private String getFileName(String dir, String fileName) {
