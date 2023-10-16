@@ -21,3 +21,7 @@ Default output format [None]:
 aws s3 mb s3://my-bucket --endpoint-url http://localhost:4566
 
 * run app
+### Use SWAGGER UI
+
+http://localhost:8080/swagger-ui/index.html
+  
