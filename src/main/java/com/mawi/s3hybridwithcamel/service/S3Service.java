@@ -35,6 +35,16 @@ public class S3Service {
         return s3Client.putObject(putOb, RequestBody.fromInputStream(inputStream, inputStream.available()));
     }
 
+    public CopyObjectResponse copyObject(String bucketName, String srcDir, String dstDir, String filename) {
+        CopyObjectRequest copyOb = CopyObjectRequest.builder()
+                .sourceBucket(bucketName)
+                .sourceKey(getFileName(srcDir, filename))
+                .destinationBucket(bucketName)
+                .destinationKey(getFileName(dstDir, filename))
+                .build();
+        return s3Client.copyObject(copyOb);
+    }
+
     public ResponseInputStream<GetObjectResponse> getObjectInputStream(String bucketName, String dir, String fileName) {
         GetObjectRequest getOb = GetObjectRequest.builder()
                 .bucket(bucketName)
