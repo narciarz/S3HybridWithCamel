@@ -14,4 +14,5 @@ public class S3Properties {
     private String accessKey;
     private String secretKey;
     private Region region;
+    private String camelPrefix;
 }
