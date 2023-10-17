@@ -57,7 +57,20 @@ public class S3Controller {
         }
     }
 
-    @PostMapping(value = "bucket/{bucketName}/uploadFile",
+    @GetMapping(value = "/bucket/{bucketName}/copyFile",
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    public String copyFile(@PathVariable("bucketName") final String bucketName,
+                           @RequestParam("filename") final String filename,
+                           @RequestParam(value = "srcDir", required = false) final String srcDir,
+                           @RequestParam(value = "dstDir", required = false) final String dstDir) throws IOException {
+        return objectMapper.writeValueAsString(
+                s3Service.copyObject(bucketName,
+                        srcDir == null ? StringUtils.EMPTY : srcDir,
+                        dstDir == null ? StringUtils.EMPTY : dstDir, filename)
+        );
+    }
+
+    @PostMapping(value = "/bucket/{bucketName}/uploadFile",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> uploadFile(@RequestPart("file") final MultipartFile file,
@@ -79,7 +92,7 @@ public class S3Controller {
         }
     }
 
-    @DeleteMapping(value = "bucket/{bucketName}/deleteFile",
+    @DeleteMapping(value = "/bucket/{bucketName}/deleteFile",
             produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> deleteObject(
             @PathVariable("bucketName") final String bucketName,
@@ -96,7 +109,7 @@ public class S3Controller {
         }
     }
 
-    @GetMapping(path = "bucket/{bucketName}/downloadFile")
+    @GetMapping(path = "/bucket/{bucketName}/downloadFile")
     public ResponseEntity<Resource> downloadFileOther(
             @PathVariable("bucketName") final String bucketName,
             @RequestParam(value = "dir", required = false) final String dir,
