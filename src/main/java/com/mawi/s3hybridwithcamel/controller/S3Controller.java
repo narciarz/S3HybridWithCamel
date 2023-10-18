@@ -32,7 +32,6 @@ import java.io.IOException;
 @Slf4j
 public class S3Controller {
     private final S3Service s3Service;
-    private static final String NO_KEY_OR_BUCKET = "No such bucket / key found";
     ObjectMapper objectMapper = new ObjectMapper()
             .setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -48,11 +47,7 @@ public class S3Controller {
             @PathVariable final String bucketName,
             @RequestParam(value = "dir", required = false) final String dir
     ) throws JsonProcessingException {
-        try {
-            return objectMapper.writeValueAsString(s3Service.listObjects(bucketName, dir));
-        } catch (NoSuchBucketException | NoSuchKeyException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NO_KEY_OR_BUCKET);
-        }
+        return objectMapper.writeValueAsString(s3Service.listObjects(bucketName, dir));
     }
 
     @GetMapping(value = "/bucket/{bucketName}/copyFile",
@@ -62,15 +57,11 @@ public class S3Controller {
                            @RequestParam(value = "srcDir", required = false) final String srcDir,
                            @RequestParam(value = "dstDir", required = false) final String dstDir
     ) throws JsonProcessingException {
-        try {
-            return objectMapper.writeValueAsString(
-                    s3Service.copyObject(bucketName,
-                            srcDir == null ? StringUtils.EMPTY : srcDir,
-                            dstDir == null ? StringUtils.EMPTY : dstDir, fileName)
-            );
-        } catch (NoSuchBucketException | NoSuchKeyException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NO_KEY_OR_BUCKET);
-        }
+        return objectMapper.writeValueAsString(
+                s3Service.copyObject(
+                        bucketName, srcDir == null ? StringUtils.EMPTY : srcDir,
+                        dstDir == null ? StringUtils.EMPTY : dstDir, fileName)
+        );
     }
 
     @PostMapping(value = "/bucket/{bucketName}/uploadFile",
@@ -80,14 +71,9 @@ public class S3Controller {
                              @PathVariable("bucketName") final String bucketName,
                              @RequestParam(value = "fileName", required = false) final String fileName,
                              @RequestParam(value = "dir", required = false) final String dir) throws IOException {
-        try {
-            return objectMapper.writeValueAsString(
-                    s3Service.putObject(bucketName, dir == null ? StringUtils.EMPTY : dir,
-                            fileName != null ? fileName : file.getOriginalFilename(),
-                            file.getInputStream()));
-        } catch (NoSuchBucketException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No such bucket found");
-        }
+        return objectMapper.writeValueAsString(s3Service.putObject(bucketName, dir == null ? StringUtils.EMPTY : dir,
+                fileName != null ? fileName : file.getOriginalFilename(),
+                file.getInputStream()));
     }
 
     @DeleteMapping(value = "/bucket/{bucketName}/deleteFile",
@@ -97,36 +83,30 @@ public class S3Controller {
             @RequestParam(value = "fileName") final String fileName,
             @RequestParam(value = "dir", required = false) final String dir
     ) throws JsonProcessingException {
-        try {
             return objectMapper.writeValueAsString(s3Service.deleteObject(bucketName, dir, fileName));
-        } catch (NoSuchBucketException | NoSuchKeyException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, NO_KEY_OR_BUCKET);
-        }
     }
 
     @GetMapping(path = "/bucket/{bucketName}/downloadFile")
     public ResponseEntity<Resource> downloadFileOther(
             @PathVariable("bucketName") final String bucketName,
             @RequestParam(value = "dir", required = false) final String dir,
-            @RequestParam("fileName") final String fileName) {
-        try {
-            ResponseInputStream<GetObjectResponse> inputStream = s3Service.getObjectInputStream(bucketName, dir, fileName);
-            InputStreamResource resource = new InputStreamResource(inputStream);
-            HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
-            headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
-            headers.add("Pragma", "no-cache");
-            headers.add("Expires", "0");
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .contentLength(inputStream.available())
-                    .contentType(MediaType.parseMediaType("application/octet-stream"))
-                    .body(resource);
-        } catch (NoSuchBucketException | NoSuchKeyException e) {
-            return ResponseEntity.notFound().build();
-        } catch (Exception e) {
-            log.error("Cannot download [{}] from [{}] {}", fileName, bucketName, e.getMessage());
-            return ResponseEntity.internalServerError().build();
-        }
+            @RequestParam("fileName") final String fileName) throws IOException {
+        ResponseInputStream<GetObjectResponse> inputStream = s3Service.getObjectInputStream(bucketName, dir, fileName);
+        InputStreamResource resource = new InputStreamResource(inputStream);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName);
+        headers.add("Cache-Control", "no-cache, no-store, must-revalidate");
+        headers.add("Pragma", "no-cache");
+        headers.add("Expires", "0");
+        return ResponseEntity.ok()
+                .headers(headers)
+                .contentLength(inputStream.available())
+                .contentType(MediaType.parseMediaType("application/octet-stream"))
+                .body(resource);
+    }
+
+    @ExceptionHandler({NoSuchBucketException.class, NoSuchKeyException.class})
+    public ResponseStatusException handleAwsExceptions() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "No such bucket / key found");
     }
 }
